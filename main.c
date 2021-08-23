@@ -36,9 +36,23 @@ typedef struct searchTreeProto {
   node *firstNode;
 } searchTree;
 
+/* Aloca um no na arvore */
 void allocateNode(node *starterNode, int value);
+
+/* Aloca o primeiro no na arvore */
 node *allocateFirstNode(node *which, int value);
+
+/* Libera todos os nos da arvore recursivamente */
 void freeTree(node *starterNode);
+
+/* Procura um no com o valor de who, retorna o ponteiro se achar, NULL se nao
+ * achar */
+node *search(node *starterNode, int who);
+
+/* Deleta um no da arvore que coincide com o numero de who, nao faz nada se nao
+ * achar */
+void deleteNode(node *startedNode, int who);
+
 void drawNode();
 void drawTree();
 
@@ -54,6 +68,9 @@ int main(int argc, char *argv[]) {
   printf("%d\n", tree.firstNode->val);
 
   allocateNode(tree.firstNode, 5);
+
+  printf("O valor %d foi encontrado?\nR:%d\n", 5,
+         search(tree.firstNode, 5)->val);
 
   freeTree(tree.firstNode);
 
@@ -106,3 +123,19 @@ void freeTree(node *starterNode) {
   /* Retornar se ambos os galhos do no forem nulos */
   return;
 }
+
+node *search(node *starterNode, int who) {
+  /* Tres casos, se nao se encaixar em nenhum, retornar nulo */
+  if (starterNode->val == who) {
+    return starterNode;
+  } else if (starterNode->val < who) {
+    if (starterNode->right != NULL)
+      return search(starterNode->right, who);
+  } else {
+    if (starterNode->left != NULL)
+      return search(starterNode->left, who);
+  }
+  return NULL;
+}
+
+// void deleteNode(node *startedNode, int who) {}
