@@ -1,0 +1,4 @@
+.vscode/
+prog
+*.o
+*.a
