@@ -38,6 +38,7 @@ typedef struct searchTreeProto {
 
 void allocateNode(node *starterNode, int value);
 node *allocateFirstNode(node *which, int value);
+void freeTree(node *starterNode);
 void drawNode();
 void drawTree();
 
@@ -52,7 +53,9 @@ int main(int argc, char *argv[]) {
 
   printf("%d\n", tree.firstNode->val);
 
-  free(tree.firstNode);
+  allocateNode(tree.firstNode, 5);
+
+  freeTree(tree.firstNode);
 
   return 0;
 }
@@ -86,4 +89,20 @@ node *allocateFirstNode(node *which, int value) {
   which->val = value;
   printf("Alocado o valor %d no primeiro no.\n", which->val);
   return which;
+}
+
+void freeTree(node *starterNode) {
+  /* Chamar pra todos os nos da direita */
+  if (starterNode->right != NULL) {
+    freeTree(starterNode->right);
+  }
+
+  /* Chamar pra todos os nos da esquerda */
+  if (starterNode->left != NULL) {
+    freeTree(starterNode->left);
+  }
+  /* Se chegou no final da arvore, se liberar */
+  free(starterNode);
+  /* Retornar se ambos os galhos do no forem nulos */
+  return;
 }
