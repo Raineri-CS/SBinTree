@@ -46,18 +46,15 @@ typedef struct searchTreeProto {
   node *firstNode;
 } searchTree;
 
-/* Aloca um no na arvore */
-void allocateNode(node *root, int value);
-
-/* Aloca o primeiro no na arvore */
-node *allocateFirstNode(node *which, int value);
-
 /* Libera todos os nos da arvore recursivamente */
 void freeTree(node *root);
 
-/* Procura um no com o valor de who, retorna o ponteiro se achar, NULL se nao
- * achar */
-void search(node *root, int who, int *returnCode);
+/* Insere WHO na arvore */
+void insertNode(node **root, int who);
+
+/* Procura um no com o valor de who, retorna o ponteiro e um codigo de retorno,
+ * definido no enum */
+void search(node **root, int who, int *returnCode);
 
 /* Deleta um no da arvore que coincide com o numero de who, nao faz nada se nao
  * achar */
@@ -70,49 +67,47 @@ int main(int argc, char *argv[]) {
   argc = argc;
   argv = argv;
   searchTree tree;
+  node *ptr;
 
   tree.firstNode = NULL;
 
-  tree.firstNode = allocateFirstNode(tree.firstNode, 3);
+  insertNode(&tree.firstNode, 3);
+  insertNode(&tree.firstNode, 4);
+  insertNode(&tree.firstNode, 5);
+  insertNode(&tree.firstNode, 1);
+  insertNode(&tree.firstNode, 2);
+
+  ptr = tree.firstNode;
 
   printf("%d\n", tree.firstNode->val);
 
-  allocateNode(tree.firstNode, 5);
-
   freeTree(tree.firstNode);
-
+  tree.firstNode = NULL;
+  
   return 0;
 }
 
-void allocateNode(node *root, int value) {
-  if (root->val < value) {
-    /* right block */
-    if (root->right != NULL)
-      allocateNode(root->right, value);
-    root->right = (node *)malloc(sizeof(node));
-    root->right->right = NULL;
-    root->right->left = NULL;
-    root->right->val = value;
-    printf("Alocado o valor %d.\n", root->right->val);
-  } else {
-    /* left block */
-    if (root->left != NULL)
-      allocateNode(root->left, value);
-    root->left = (node *)malloc(sizeof(node));
-    root->left->right = NULL;
-    root->left->left = NULL;
-    root->left->val = value;
-    printf("Alocado o valor %d.\n", root->left->val);
-  }
-}
+/* NOTE: usando os algoritmos passados em aula, conforme instruido */
+void insertNode(node **root, int who) {
+  int retCode;
+  node *ptr, *auxPtr;
+  ptr = *root;
+  search(&ptr, who, &retCode);
 
-node *allocateFirstNode(node *which, int value) {
-  which = (node *)malloc(sizeof(node));
-  which->left = NULL;
-  which->right = NULL;
-  which->val = value;
-  printf("Alocado o valor %d no primeiro no.\n", which->val);
-  return which;
+  if (retCode == FOUND) {
+    printf("Insercao invalida\n");
+  } else {
+    auxPtr = malloc(sizeof(node));
+    auxPtr->val = who;
+    auxPtr->left = NULL;
+    auxPtr->right = NULL;
+    if (retCode == EMPTY_TREE) {
+      *root = auxPtr;
+    } else if (retCode == LEFT_NOT_FOUND) {
+      ptr->left = auxPtr;
+    } else
+      ptr->right = auxPtr;
+  }
 }
 
 void freeTree(node *root) {
@@ -131,22 +126,25 @@ void freeTree(node *root) {
 }
 
 /* NOTE: usando os algoritmos passados em aula, conforme instruido */
-void search(node *root, int who, int *returnCode) {
-  if (root == NULL) {
+void search(node **root, int who, int *returnCode) {
+  /* Stack goes BRRRRRR */
+  node *localNode;
+  localNode = *root;
+  if (*root == NULL) {
     *returnCode = EMPTY_TREE;
-  } else if (who == root->val) {
+  } else if (who == localNode->val) {
     *returnCode = FOUND;
-  } else if (who < root->val) {
-    if (root->left == NULL) {
+  } else if (who < localNode->val) {
+    if (localNode->left == NULL) {
       *returnCode = LEFT_NOT_FOUND;
     } else {
-      root = root->left;
+      *root = localNode->left;
       search(root, who, returnCode);
     }
-  } else if (root->right == NULL) {
+  } else if (localNode->right == NULL) {
     *returnCode = RIGHT_NOT_FOUND;
   } else {
-    root = root->right;
+    *root = localNode->right;
     search(root, who, returnCode);
   }
 }
