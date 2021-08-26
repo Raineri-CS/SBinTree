@@ -43,7 +43,7 @@ typedef struct nodeProto {
 } node;
 
 typedef struct searchTreeProto {
-  node *firstNode;
+  node *root;
 } searchTree;
 
 /* Libera todos os nos da arvore recursivamente */
@@ -58,7 +58,13 @@ void search(node **root, int who, int *returnCode);
 
 /* Deleta um no da arvore que coincide com o numero de who, nao faz nada se nao
  * achar */
-void deleteNode(node *startedNode, int who);
+void deleteNode(searchTree *tree, node *who);
+
+/* substitui a subarvore com raiz em u pela com raiz em v */
+void transplant(searchTree *tree, node *u, node *v);
+
+node *tree_min(node *root);
+node *tree_max(node *root);
 
 void drawNode();
 void drawTree();
@@ -68,22 +74,31 @@ int main(int argc, char *argv[]) {
   argv = argv;
   searchTree tree;
   node *ptr;
+  int retCode;
 
-  tree.firstNode = NULL;
+  tree.root = NULL;
 
-  insertNode(&tree.firstNode, 3);
-  insertNode(&tree.firstNode, 4);
-  insertNode(&tree.firstNode, 5);
-  insertNode(&tree.firstNode, 1);
-  insertNode(&tree.firstNode, 2);
+  insertNode(&tree.root, 3);
+  insertNode(&tree.root, 1);
+  insertNode(&tree.root, 7);
+  insertNode(&tree.root, 2);
+  insertNode(&tree.root, 5);
+  insertNode(&tree.root, 4);
+  insertNode(&tree.root, 6);
 
-  ptr = tree.firstNode;
+  ptr = tree.root;
 
-  printf("%d\n", tree.firstNode->val);
+  printf("%d\n", tree.root->val);
 
-  freeTree(tree.firstNode);
-  tree.firstNode = NULL;
-  
+  search(&ptr, 5, &retCode);
+  if (retCode == FOUND) {
+    deleteNode(&tree, ptr);
+    free(ptr);
+  }
+
+  freeTree(tree.root);
+  tree.root = NULL;
+
   return 0;
 }
 
@@ -149,6 +164,47 @@ void search(node **root, int who, int *returnCode) {
   }
 }
 
-void deleteNode(node *startedNode, int who) {
-  // TODO
+void deleteNode(searchTree *tree, node *who) {
+  if (who->left == NULL) {
+    transplant(tree, who, who->right);
+  } else if (who->right == NULL) {
+    transplant(tree, who, who->left);
+  } else {
+    node *y;
+    y = tree_min(who->right);
+    if (y != who) {
+      transplant(tree, y, y->right);
+      y->right = who->right;
+    }
+    transplant(tree, who, y);
+    y->left = who->left;
+  }
+}
+
+/* NOTE: usando os algoritmos passados em aula, conforme instruido */
+void transplant(searchTree *tree, node *u, node *v) {
+  if (u == NULL) {
+    tree->root = v;
+  } else if (u == u->left) {
+    u->left = v;
+  } else
+    u->right = v;
+  if (v != NULL)
+    v = u;
+}
+
+/* NOTE: como nao tinha implementacao desses metodos nos slides, eu fiz o meu
+ * proprio */
+node *tree_min(node *root) {
+  if (root->left == NULL)
+    return root;
+  return tree_min(root->left);
+}
+
+/* NOTE: como nao tinha implementacao desses metodos nos slides, eu fiz o meu
+ * proprio */
+node *tree_max(node *root) {
+  if (root->right == NULL)
+    return root;
+  return tree_min(root->right);
 }
