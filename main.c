@@ -6,7 +6,17 @@
 #include "gfx/gfx.h"
 
 /* Constantes */
-enum { INSERT, REMOVE, SEARCH, LEFT, RIGHT };
+enum {
+  INSERT,
+  REMOVE,
+  SEARCH,
+  LEFT,
+  RIGHT,
+  EMPTY_TREE,
+  FOUND,
+  LEFT_NOT_FOUND,
+  RIGHT_NOT_FOUND
+};
 #define FONT_SIZE 30
 
 /* O tamanho da janela*/
@@ -47,7 +57,7 @@ void freeTree(node *root);
 
 /* Procura um no com o valor de who, retorna o ponteiro se achar, NULL se nao
  * achar */
-node *search(node *root, int who);
+void search(node *root, int who, int *returnCode);
 
 /* Deleta um no da arvore que coincide com o numero de who, nao faz nada se nao
  * achar */
@@ -68,9 +78,6 @@ int main(int argc, char *argv[]) {
   printf("%d\n", tree.firstNode->val);
 
   allocateNode(tree.firstNode, 5);
-
-  printf("O valor %d foi encontrado?\nR:%d\n", 5,
-         search(tree.firstNode, 5)->val);
 
   freeTree(tree.firstNode);
 
@@ -113,7 +120,6 @@ void freeTree(node *root) {
   if (root->right != NULL) {
     freeTree(root->right);
   }
-
   /* Chamar pra todos os nos da esquerda */
   if (root->left != NULL) {
     freeTree(root->left);
@@ -124,18 +130,25 @@ void freeTree(node *root) {
   return;
 }
 
-node *search(node *root, int who) {
-  /* Tres casos, se nao se encaixar em nenhum, retornar nulo */
-  if (root->val == who) {
-    return root;
-  } else if (root->val < who) {
-    if (root->right != NULL)
-      return search(root->right, who);
+/* NOTE: usando os algoritmos passados em aula, conforme instruido */
+void search(node *root, int who, int *returnCode) {
+  if (root == NULL) {
+    *returnCode = EMPTY_TREE;
+  } else if (who == root->val) {
+    *returnCode = FOUND;
+  } else if (who < root->val) {
+    if (root->left == NULL) {
+      *returnCode = LEFT_NOT_FOUND;
+    } else {
+      root = root->left;
+      search(root, who, returnCode);
+    }
+  } else if (root->right == NULL) {
+    *returnCode = RIGHT_NOT_FOUND;
   } else {
-    if (root->left != NULL)
-      return search(root->left, who);
+    root = root->right;
+    search(root, who, returnCode);
   }
-  return NULL;
 }
 
 void deleteNode(node *startedNode, int who) {
