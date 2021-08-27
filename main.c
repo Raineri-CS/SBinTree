@@ -39,7 +39,7 @@ typedef struct rgbColor {
 
 typedef struct nodeProto {
   int val;
-  struct nodeProto *left, *right;
+  struct nodeProto *left, *right, *parent;
 } node;
 
 typedef struct searchTreeProto {
@@ -116,12 +116,16 @@ void insertNode(node **root, int who) {
     auxPtr->val = who;
     auxPtr->left = NULL;
     auxPtr->right = NULL;
+    auxPtr->parent = NULL;
     if (retCode == EMPTY_TREE) {
       *root = auxPtr;
     } else if (retCode == LEFT_NOT_FOUND) {
       ptr->left = auxPtr;
-    } else
+      auxPtr->parent = ptr;
+    } else {
       ptr->right = auxPtr;
+      auxPtr->parent = ptr;
+    }
   }
 }
 
@@ -164,33 +168,37 @@ void search(node **root, int who, int *returnCode) {
   }
 }
 
-void deleteNode(searchTree *tree, node *who) {
-  if (who->left == NULL) {
-    transplant(tree, who, who->right);
-  } else if (who->right == NULL) {
-    transplant(tree, who, who->left);
+void deleteNode(searchTree *tree, node *z) {
+  /* Se o da direita for vazio... */
+  if (z->left == NULL) {
+    /* Trocar this por this->right */
+    transplant(tree, z, z->right);
+  } else if (z->right == NULL) {
+    transplant(tree, z, z->left);
   } else {
     node *y;
-    y = tree_min(who->right);
-    if (y != who) {
+    y = tree_min(z->right);
+    if (y->parent != z) {
       transplant(tree, y, y->right);
-      y->right = who->right;
+      y->right = z->right;
+      y->right->parent = y;
     }
-    transplant(tree, who, y);
-    y->left = who->left;
+    transplant(tree, z, y);
+    y->left = z->left;
+    y->left->parent = y;
   }
 }
 
 /* NOTE: usando os algoritmos passados em aula, conforme instruido */
 void transplant(searchTree *tree, node *u, node *v) {
-  if (u == NULL) {
+  if (u->parent == NULL) {
     tree->root = v;
-  } else if (u == u->left) {
-    u->left = v;
+  } else if (u == u->parent->left) {
+    u->parent->left = v;
   } else
-    u->right = v;
+    u->parent->right = v;
   if (v != NULL)
-    v = u;
+    v->parent = u->parent;
 }
 
 /* NOTE: como nao tinha implementacao desses metodos nos slides, eu fiz o meu
