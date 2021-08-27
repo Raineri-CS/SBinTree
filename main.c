@@ -1,6 +1,8 @@
 /* Lucas Roberto Raineri Oliveira - 38346 */
 /* Codigo formatado utilizando o clang-format no formato LLVM*/
 
+/* NOTE: Testado com a arvore {3,1,2,7,5,4,6} */
+
 #include <stdio.h>
 
 #include "gfx/gfx.h"
@@ -10,13 +12,13 @@ enum {
   INSERT,
   REMOVE,
   SEARCH,
-  LEFT,
-  RIGHT,
+  EXIT,
   EMPTY_TREE,
   FOUND,
   LEFT_NOT_FOUND,
   RIGHT_NOT_FOUND
 };
+
 #define FONT_SIZE 30
 
 /* O tamanho da janela*/
@@ -29,13 +31,6 @@ enum {
 #else
 #define clear() system("cls");
 #endif
-
-/* Estrutura auxiliar pra cor */
-typedef struct rgbColor {
-  int red;
-  int green;
-  int blue;
-} rgb;
 
 typedef struct nodeProto {
   int val;
@@ -63,41 +58,96 @@ void deleteNode(searchTree *tree, node *who);
 /* substitui a subarvore com raiz em u pela com raiz em v */
 void transplant(searchTree *tree, node *u, node *v);
 
+/* Retorna o no com menor valor (mais a esquerda) a partir de uma subarvore root
+ */
 node *tree_min(node *root);
+
+/* Retorna o no com maior valor (mais a direita) a partir de uma subarvore root
+ */
 node *tree_max(node *root);
 
-void drawNode();
-void drawTree();
+void drawTree(searchTree *tree);
+void drawNode(node *which, int x, int y);
+void recursiveDrawFromRoot(node *root, int *depthX, int *depthY);
 
 int main(int argc, char *argv[]) {
   argc = argc;
-  argv = argv;
+  argv[0] = "Arvore de busca";
   searchTree tree;
   node *ptr;
-  int retCode;
+  int retCode, opc, aux;
 
   tree.root = NULL;
+  gfx_init(tamX, tamY, "Arvore de busca");
 
-  insertNode(&tree.root, 3);
-  insertNode(&tree.root, 1);
-  insertNode(&tree.root, 7);
-  insertNode(&tree.root, 2);
-  insertNode(&tree.root, 5);
-  insertNode(&tree.root, 4);
-  insertNode(&tree.root, 6);
-
-  ptr = tree.root;
-
-  printf("%d\n", tree.root->val);
-
-  search(&ptr, 5, &retCode);
-  if (retCode == FOUND) {
-    deleteNode(&tree, ptr);
-    free(ptr);
+  /*
+  Search
+  Insertion
+  Removal of whole keys
+  */
+  for (;;) {
+    ptr = tree.root;
+    do {
+      printf("Informe o que quer fazer na arvore\n\t0 - Insercao\n\t1 - "
+             "Remocao\n\t2 - Procura\n\t3 - Sair\n");
+      scanf("%d", &opc);
+      clear();
+    } while (opc < INSERT || opc > EXIT);
+    if (opc == EXIT)
+      break;
+    switch (opc) {
+    case INSERT:
+      printf("Informe o termo inteiro a ser inserido.\n");
+      scanf("%d", &aux);
+      search(&ptr, aux, &retCode);
+      if (retCode != FOUND) {
+        insertNode(&tree.root, aux);
+        printf("O termo %d foi inserido com sucesso!\n", aux);
+      } else {
+        printf("O termo ja existe na arvore.\n");
+      }
+      drawTree(&tree);
+      break;
+    case REMOVE:
+      printf("Informe o termo a ser removido.\n");
+      scanf("%d", &aux);
+      search(&ptr, aux, &retCode);
+      /* Se nao achou um termo com esse numero, ignorar */
+      if (retCode != FOUND) {
+        printf("Termo nao encontrado!\n");
+      } else {
+        /* Se achou um termo com esse numero deleta o no da arvore e desaloca
+         * seu bloco de memoria */
+        deleteNode(&tree, ptr);
+        ptr->left = NULL;
+        ptr->right = NULL;
+        ptr->parent = NULL;
+        ptr->val = 0;
+        free(ptr);
+        printf("O termo %d foi removido com sucesso!\n", aux);
+      }
+      // TODO
+      drawTree(&tree);
+      break;
+    case SEARCH:
+      printf("Informe o termo a ser procurado.\n");
+      scanf("%d", &aux);
+      search(&ptr, aux, &retCode);
+      if (retCode != FOUND) {
+        printf("Termo nao encontrado!\n");
+      } else {
+        printf("No encontrado! Tem como valor %d.\n", ptr->val);
+      }
+      break;
+    default:
+      break;
+    }
   }
 
+  /* Finalizacao do programa */
   freeTree(tree.root);
   tree.root = NULL;
+  gfx_quit();
 
   return 0;
 }
@@ -130,18 +180,19 @@ void insertNode(node **root, int who) {
 }
 
 void freeTree(node *root) {
-  /* Chamar pra todos os nos da direita */
-  if (root->right != NULL) {
-    freeTree(root->right);
+  if (root != NULL) {
+    /* Chamar pra todos os nos da direita */
+    if (root->right != NULL) {
+      freeTree(root->right);
+    }
+    /* Chamar pra todos os nos da esquerda */
+    if (root->left != NULL) {
+      freeTree(root->left);
+    }
+    /* Se chegou no final da arvore, se liberar */
+    free(root);
+    /* Retornar se ambos os galhos do no forem nulos */
   }
-  /* Chamar pra todos os nos da esquerda */
-  if (root->left != NULL) {
-    freeTree(root->left);
-  }
-  /* Se chegou no final da arvore, se liberar */
-  free(root);
-  /* Retornar se ambos os galhos do no forem nulos */
-  return;
 }
 
 /* NOTE: usando os algoritmos passados em aula, conforme instruido */
@@ -215,4 +266,87 @@ node *tree_max(node *root) {
   if (root->right == NULL)
     return root;
   return tree_min(root->right);
+}
+
+void drawTree(searchTree *tree) {
+  /* As minhas projecoes de calculo servem para uma profundidade maxima de 5 p/
+   * uma resolucao de 1280x720, eu podia melhorar isso fazendo com que o usuario
+   * consiguisse redimensionar o viewport direto da tela com o mouse wheel up ou
+   * down, mas teria que implementar isso diretamente na integracao com a SDL, o
+   * que provavelmente seria uma dor de cabeca enorme, julgo uma profundidade de
+   * 5 suficiente para os testes a serem realizados */
+  int localDepthX, localDepthY;
+
+  localDepthX = 0;
+  localDepthY = 0;
+  gfx_clear();
+  recursiveDrawFromRoot(tree->root, &localDepthX, &localDepthY);
+  gfx_paint();
+}
+
+void drawNode(node *which, int x, int y) {
+  char buffer[32];
+  /* Background */
+  gfx_set_color(128, 128, 128);
+  gfx_filled_ellipse(x, y, 56, 56);
+  /* Contorno */
+  gfx_set_color(255, 255, 255);
+  gfx_ellipse(x, y, 56, 56);
+  /* Texto */
+  gfx_set_font_size(FONT_SIZE);
+  gfx_set_color(255, 0, 0);
+  sprintf(buffer, "%d", which->val);
+  gfx_text(x - 28, y - 20, buffer);
+}
+
+void recursiveDrawFromRoot(node *root, int *depthX, int *depthY) {
+  int sizeX, sizeY;
+  sizeX = (tamX / 2) + ((*depthX * 112) + 10);
+  sizeY = 56 + ((*depthY * 112) + 10);
+  if (root != NULL) {
+    if (root->right != NULL) {
+      gfx_set_color(255, 255, 255);
+      if (root->parent == NULL) {
+        *depthX += 3;
+        gfx_line(sizeX, sizeY, (sizeX + 75) + 224, sizeY + 75);
+      } else {
+        *depthX += 1;
+        gfx_line(sizeX, sizeY, sizeX + 75, sizeY + 75);
+      }
+      *depthY += 1;
+      recursiveDrawFromRoot(root->right, depthX, depthY);
+    }
+    if (root->left != NULL) {
+      gfx_set_color(255, 255, 255);
+      if (root->parent == NULL) {
+        *depthX -= 3;
+        gfx_line(sizeX, sizeY, (sizeX - 75) - 224, sizeY + 75);
+      } else {
+        *depthX -= 1;
+        gfx_line(sizeX, sizeY, sizeX - 75, sizeY + 75);
+      }
+      *depthY += 1;
+      recursiveDrawFromRoot(root->left, depthX, depthY);
+    }
+    /* Volta desenhando... */
+    drawNode(root, sizeX, sizeY);
+    *depthY -= 1;
+    /* Se esse cara nao for a raiz da arvore geral... */
+    if (root->parent != NULL) {
+      /* Se eu sou filho da raiz... */
+      if (root->parent->parent == NULL) {
+        if (root->parent->left == root)
+          *depthX += 3;
+        else
+          *depthX -= 3;
+      } else {
+        if (root->parent->left == root)
+          *depthX += 1;
+        else
+          *depthX -= 1;
+      }
+    }
+  } else {
+    gfx_clear();
+  }
 }
