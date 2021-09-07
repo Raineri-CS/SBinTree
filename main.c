@@ -34,7 +34,7 @@ enum {
 
 typedef struct nodeProto {
   int val;
-  struct nodeProto *left, *right, *parent;
+  struct nodeProto *left, *right;
 } node;
 
 typedef struct searchTreeProto {
@@ -68,7 +68,10 @@ node *tree_max(node *root);
 
 void drawTree(searchTree *tree);
 void drawNode(node *which, int x, int y);
-void recursiveDrawFromRoot(node *root, int *depthX, int *depthY);
+void recursiveDrawFromRoot(node *root, int *depthX, int *depthY,
+                           node *treeRoot);
+
+node *getParent(node *child, node *root);
 
 int main(int argc, char *argv[]) {
   argc = argc;
@@ -121,12 +124,10 @@ int main(int argc, char *argv[]) {
         deleteNode(&tree, ptr);
         ptr->left = NULL;
         ptr->right = NULL;
-        ptr->parent = NULL;
         ptr->val = 0;
         free(ptr);
         printf("O termo %d foi removido com sucesso!\n", aux);
       }
-      // TODO
       drawTree(&tree);
       break;
     case SEARCH:
@@ -166,15 +167,12 @@ void insertNode(node **root, int who) {
     auxPtr->val = who;
     auxPtr->left = NULL;
     auxPtr->right = NULL;
-    auxPtr->parent = NULL;
     if (retCode == EMPTY_TREE) {
       *root = auxPtr;
     } else if (retCode == LEFT_NOT_FOUND) {
       ptr->left = auxPtr;
-      auxPtr->parent = ptr;
     } else {
       ptr->right = auxPtr;
-      auxPtr->parent = ptr;
     }
   }
 }
@@ -223,33 +221,43 @@ void deleteNode(searchTree *tree, node *z) {
   /* Se o da direita for vazio... */
   if (z->left == NULL) {
     /* Trocar this por this->right */
+    // FIXME transplant ta atribuindo 0x0, arruma esse caralho, descobrir
+    // osource, provavelmente no cara que chama o remove
     transplant(tree, z, z->right);
   } else if (z->right == NULL) {
     transplant(tree, z, z->left);
   } else {
-    node *y;
+    node *y, *auxParent;
     y = tree_min(z->right);
-    if (y->parent != z) {
+    auxParent = getParent(y, tree->root);
+    if (auxParent != z) {
       transplant(tree, y, y->right);
       y->right = z->right;
-      y->right->parent = y;
+      auxParent = getParent(y->right, tree->root);
+      auxParent = y;
     }
     transplant(tree, z, y);
     y->left = z->left;
-    y->left->parent = y;
+    auxParent = getParent(y->left, tree->root);
+    auxParent = y;
   }
 }
 
 /* NOTE: usando os algoritmos passados em aula, conforme instruido */
 void transplant(searchTree *tree, node *u, node *v) {
-  if (u->parent == NULL) {
+  // FIXME depreciado
+  // node *tempParentV, *tempParentU;
+  if (getParent(u, tree->root) == NULL) {
     tree->root = v;
-  } else if (u == u->parent->left) {
-    u->parent->left = v;
+  } else if (u == getParent(u, tree->root)->left) {
+    getParent(u, tree->root)->left = v;
   } else
-    u->parent->right = v;
-  if (v != NULL)
-    v->parent = u->parent;
+    getParent(u, tree->root)->right = v;
+  // TODO remover isso aqui
+  // if (v != NULL)
+  //   tempParentV = getParent(v, tree->root);
+  // tempParentU = getParent(u, tree->root);
+  // *tempParentV = *tempParentU;
 }
 
 /* NOTE: como nao tinha implementacao desses metodos nos slides, eu fiz o meu
@@ -280,7 +288,7 @@ void drawTree(searchTree *tree) {
   localDepthX = 0;
   localDepthY = 0;
   gfx_clear();
-  recursiveDrawFromRoot(tree->root, &localDepthX, &localDepthY);
+  recursiveDrawFromRoot(tree->root, &localDepthX, &localDepthY, tree->root);
   gfx_paint();
 }
 
@@ -299,14 +307,15 @@ void drawNode(node *which, int x, int y) {
   gfx_text(x - 28, y - 20, buffer);
 }
 
-void recursiveDrawFromRoot(node *root, int *depthX, int *depthY) {
+void recursiveDrawFromRoot(node *root, int *depthX, int *depthY,
+                           node *treeRoot) {
   int sizeX, sizeY;
   sizeX = (tamX / 2) + ((*depthX * 112) + 10);
   sizeY = 56 + ((*depthY * 112) + 10);
   if (root != NULL) {
     if (root->right != NULL) {
       gfx_set_color(255, 255, 255);
-      if (root->parent == NULL) {
+      if (getParent(root, treeRoot) == NULL) {
         *depthX += 3;
         gfx_line(sizeX, sizeY, (sizeX + 75) + 224, sizeY + 75);
       } else {
@@ -314,11 +323,11 @@ void recursiveDrawFromRoot(node *root, int *depthX, int *depthY) {
         gfx_line(sizeX, sizeY, sizeX + 75, sizeY + 75);
       }
       *depthY += 1;
-      recursiveDrawFromRoot(root->right, depthX, depthY);
+      recursiveDrawFromRoot(root->right, depthX, depthY, treeRoot);
     }
     if (root->left != NULL) {
       gfx_set_color(255, 255, 255);
-      if (root->parent == NULL) {
+      if (getParent(root, treeRoot) == NULL) {
         *depthX -= 3;
         gfx_line(sizeX, sizeY, (sizeX - 75) - 224, sizeY + 75);
       } else {
@@ -326,21 +335,21 @@ void recursiveDrawFromRoot(node *root, int *depthX, int *depthY) {
         gfx_line(sizeX, sizeY, sizeX - 75, sizeY + 75);
       }
       *depthY += 1;
-      recursiveDrawFromRoot(root->left, depthX, depthY);
+      recursiveDrawFromRoot(root->left, depthX, depthY, treeRoot);
     }
     /* Volta desenhando... */
     drawNode(root, sizeX, sizeY);
     *depthY -= 1;
     /* Se esse cara nao for a raiz da arvore geral... */
-    if (root->parent != NULL) {
+    if (getParent(root, treeRoot) != NULL) {
       /* Se eu sou filho da raiz... */
-      if (root->parent->parent == NULL) {
-        if (root->parent->left == root)
+      if (getParent(getParent(root, treeRoot), treeRoot) == NULL) {
+        if (getParent(root, treeRoot)->left == root)
           *depthX += 3;
         else
           *depthX -= 3;
       } else {
-        if (root->parent->left == root)
+        if (getParent(root, treeRoot)->left == root)
           *depthX += 1;
         else
           *depthX -= 1;
@@ -349,4 +358,24 @@ void recursiveDrawFromRoot(node *root, int *depthX, int *depthY) {
   } else {
     gfx_clear();
   }
+}
+
+node *getParent(node *child, node *root) {
+  if (child == root) {
+    return NULL;
+  }
+  if (root->val < child->val) {
+    if (root->right == child) {
+      return root;
+    } else {
+      return getParent(child, root->right);
+    }
+  } else if (root->val > child->val) {
+    if (root->left == child) {
+      return root;
+    } else {
+      return getParent(child, root->left);
+    }
+  }
+  return NULL;
 }
